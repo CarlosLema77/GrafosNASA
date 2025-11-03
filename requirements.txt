@@ -1,0 +1,2 @@
+pytest
+tkintertable  # si usas Tkinter (se instala junto a Tkinter normalmente)
