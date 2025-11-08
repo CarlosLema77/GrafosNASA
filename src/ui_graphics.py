@@ -8,22 +8,19 @@ class StarMapApp:
 
     def __init__(self, json_path):
         self.root = tk.Tk()
-        self.root.title("🌌 Mapa de Constelaciones (NASA Burro Edition)")
-        self.root.geometry("750x750")
+        self.root.title("Mapa de Constelaciones (NASA Burro Edition)")
+        self.root.geometry("920x800")
         self.root.configure(bg="black")
 
         # Frame superior con selector
-        top_frame = tk.Frame(self.root, bg="black")
-        top_frame.pack(pady=10)
+        tk.Label(self.root, text="Selecciona constelación:", bg="black", fg="white").place(x=150, y=20)
 
-        tk.Label(top_frame, text="Selecciona constelación:", bg="black", fg="white").pack(side="left", padx=5)
-
-        self.selector = ttk.Combobox(top_frame, state="readonly", width=30)
-        self.selector.pack(side="left")
+        self.selector = ttk.Combobox(self.root, state="readonly", width=30)
+        self.selector.place(x=290, y=18)
 
         # Canvas principal
-        self.canvas = tk.Canvas(self.root, width=600, height=600, bg="black")
-        self.canvas.pack(padx=20, pady=10)
+        self.canvas = tk.Canvas(self.root, width=700, height=720, bg="black")
+        self.canvas.place(x=6, y=50)
 
         # Cargar datos
         self.loader = JsonLoader(json_path)
@@ -68,20 +65,20 @@ class StarMapApp:
         self.line_items.clear()
         self.line_colors.clear()
 
-        # 1️⃣ Obtener constelaciones a mostrar
+        # Obtener constelaciones a mostrar
         consts_to_draw = (
             self.constellations if selected in (None, "Todas")
             else [c for c in self.constellations if c["name"] == selected]
         )
 
-        # 🎨 Mapa global de colores por estrella (para evitar búsquedas repetidas)
+        # Mapa global de colores por estrella (para evitar búsquedas repetidas)
         color_by_star = {}
         for i, c in enumerate(self.constellations):
             col = self.colors[i % len(self.colors)]
             for s in c["starts"]:
                 color_by_star[s["id"]] = col
 
-        # 2️⃣ Fase de dibujo de aristas
+        # Fase de dibujo de aristas
         for i, constellation in enumerate(consts_to_draw):
             color = self.colors[i % len(self.colors)]
             for star in constellation["starts"]:
@@ -95,13 +92,13 @@ class StarMapApp:
                         self.line_items[line] = pair
                         self.line_colors[line] = color
 
-        # 3️⃣ Construir mapa global de estrellas a dibujar
+        # Construir mapa global de estrellas a dibujar
         all_stars = {}
         for constellation in consts_to_draw:
             for star in constellation["starts"]:
                 all_stars[star["id"]] = {"data": star, "color": color_by_star.get(star["id"], "white")}
 
-        # 🔄 Asegurar que todas las estrellas referenciadas también estén en all_stars
+        # Asegurar que todas las estrellas referenciadas también estén en all_stars
         for constellation in consts_to_draw:
             for star in constellation["starts"]:
                 for link in star["linkedTo"]:
@@ -110,7 +107,7 @@ class StarMapApp:
                         tid = target["id"]
                         all_stars[tid] = {"data": target, "color": color_by_star.get(tid, "white")}
 
-        # 4️⃣ Dibujar todas las estrellas
+        #Dibujar todas las estrellas
         for sid, info in all_stars.items():
             star = info["data"]
             x, y = self.scale(star["coordenates"]["x"], star["coordenates"]["y"])
@@ -130,13 +127,23 @@ class StarMapApp:
         """Panel lateral con información general."""
         info = self.loader.get_general_info()
         panel = tk.LabelFrame(self.root, text="Información general", fg="white", bg="black", padx=10, pady=10)
-        panel.place(x=10, y=10, width=250, height=140)
+        panel.place(x=715, y=20, width=200, height=752)
 
         for i, (k, v) in enumerate(info.items()):
             tk.Label(panel, text=f"{k}: {v}", bg="black", fg="white", anchor="w").pack(anchor="w")
 
         self.blocked_label = tk.Label(panel, text="Caminos bloqueados: 0", bg="black", fg="orange", anchor="w")
         self.blocked_label.pack(anchor="w", pady=(5, 0))
+        
+        """Botón para configuracion de estrellas"""
+        config_btn = tk.Button(
+            panel,
+            text = "Configurar Estrellas",
+            bg = "white",
+            fg = "gray",
+            command = self.open_star_config_window
+        )
+        config_btn.pack(anchor = "w", pady = (10,0), fill = "x")
 
     def on_canvas_click(self, event):
         """Detecta clic sobre una línea y alterna su estado."""
@@ -163,6 +170,135 @@ class StarMapApp:
     def export_blocked_paths(self):
         """Devuelve los caminos bloqueados."""
         return list(self.blocked_paths)
+    
+    def open_star_config_window(self):
+        """Abre una ventana para configurar valores de cada estrella (energía y tiempo)."""
+        import os, json
+
+        config_win = tk.Toplevel(self.root)
+        config_win.title("Configuración de Estrellas")
+        config_win.geometry("450x600")
+        config_win.configure(bg="black")
+
+        # 📂 Si existe un JSON previo, lo cargamos para mantener los datos actualizados
+        star_values_path = os.path.join(os.getcwd(), "data", "star_values.json")
+        saved_values = {}
+        if os.path.exists(star_values_path):
+            try:
+                with open(star_values_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    saved_values = {int(star["id"]): star for star in data}
+            except Exception as e:
+                print("⚠️ No se pudo cargar star_values.json:", e)
+
+        # Tabla principal
+        columns = ("id", "label", "energia", "tiempo")
+        tree = ttk.Treeview(config_win, columns=columns, show="headings", height=15)
+
+        for col in columns:
+            tree.heading(col, text=col.capitalize())
+            tree.column(col, width=100 if col != "label" else 140, anchor="center")
+
+        tree.pack(padx=10, pady=10, fill="both", expand=True)
+
+        # Cargar estrellas (usando valores guardados si existen)
+        for constellation in self.constellations:
+            for star in constellation["starts"]:
+                sid = int(star["id"])
+                existing = saved_values.get(sid, {})
+                tree.insert("", "end", values=(
+                    sid,
+                    star["label"],
+                    existing.get("energia", star.get("energia", 0)),
+                    existing.get("tiempo", star.get("tiempo", 10))
+                ))
+
+        # Campos de edición
+        edit_frame = tk.Frame(config_win, bg="black")
+        edit_frame.pack(pady=5)
+
+        tk.Label(edit_frame, text="Energía:", fg="white", bg="black").grid(row=0, column=0, padx=5)
+        energia_entry = tk.Entry(edit_frame, width=8)
+        energia_entry.grid(row=0, column=1)
+
+        tk.Label(edit_frame, text="Tiempo:", fg="white", bg="black").grid(row=0, column=2, padx=5)
+        tiempo_entry = tk.Entry(edit_frame, width=8)
+        tiempo_entry.grid(row=0, column=3)
+
+        # Al seleccionar una fila, mostrar los valores
+        def on_select(event):
+            selected = tree.selection()
+            if selected:
+                values = tree.item(selected[0], "values")
+                energia_entry.delete(0, tk.END)
+                tiempo_entry.delete(0, tk.END)
+                energia_entry.insert(0, values[2])
+                tiempo_entry.insert(0, values[3])
+
+        tree.bind("<<TreeviewSelect>>", on_select)
+
+        # Guardar cambios en la tabla (sin exportar aún)
+        def save_changes():
+            selected = tree.selection()
+            if not selected:
+                return
+            new_energia = energia_entry.get()
+            new_tiempo = tiempo_entry.get()
+
+            tree.item(selected[0], values=(
+                tree.item(selected[0], "values")[0],  # id
+                tree.item(selected[0], "values")[1],  # label
+                new_energia,
+                new_tiempo
+            ))
+
+        save_btn = tk.Button(config_win, text="Guardar Cambios", command=save_changes, bg="gray20", fg="white")
+        save_btn.pack(pady=5)
+
+        # Exportar todos los valores a JSON
+        def export_values():
+            try:
+                data_to_save = []
+                for item in tree.get_children():
+                    vals = tree.item(item, "values")
+                    sid = int(vals[0])
+                    label = str(vals[1])
+                    energia = float(vals[2])
+                    tiempo = float(vals[3])
+                    data_to_save.append({
+                        "id": sid,
+                        "label": label,
+                        "energia": energia,
+                        "tiempo": tiempo
+                    })
+
+                os.makedirs(os.path.join(os.getcwd(), "data"), exist_ok=True)
+                out_path = os.path.join(os.getcwd(), "data", "star_values.json")
+
+                with open(out_path, "w", encoding="utf-8") as f:
+                    json.dump(data_to_save, f, indent=4, ensure_ascii=False)
+
+                from tkinter import messagebox
+                messagebox.showinfo("Exportado", f"✅ Valores guardados en:\n{out_path}")
+                print("✅ Valores de estrellas guardados en", out_path)
+
+            except Exception as e:
+                from tkinter import messagebox
+                messagebox.showerror("Error", f"No se pudo guardar el archivo:\n{e}")
+                print("Error guardando star_values.json:", e)
+
+        export_btn = tk.Button(
+            config_win,
+            text="💾 Exportar a JSON",
+            command=export_values,
+            bg="green",
+            fg="white"
+        )
+        export_btn.pack(pady=5)
+
+
+
+
 
 
 if __name__ == "__main__":

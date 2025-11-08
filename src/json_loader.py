@@ -57,7 +57,7 @@ class JsonLoader:
                 self._star_index[sid] = star
                 self._star_to_constellations.setdefault(sid, []).append(cname)
 
-        # ✅ Segunda pasada: registrar conexiones solo si la estrella de destino ya existe
+        # Segunda pasada: registrar conexiones solo si la estrella de destino ya existe
         for constellation in consts:
             cname = constellation["name"]
             for star in constellation["starts"]:
@@ -68,7 +68,7 @@ class JsonLoader:
                         if cname not in self._star_to_constellations[linked_id]:
                             self._star_to_constellations[linked_id].append(cname)
 
-        print("✅ Archivo JSON cargado y validado correctamente.")
+        print("Archivo JSON cargado y validado correctamente.")
 
 
     def get_constellations(self):
