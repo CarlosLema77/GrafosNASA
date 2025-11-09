@@ -3,6 +3,12 @@ from tkinter import ttk
 from json_loader import JsonLoader
 import random
 
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), "algorythmes", "bellman_ford"))
+
+from bellman_algor import BellmanFord, build_graph_from_loader, NegativeCycleError
+
+
 class StarMapApp:
     """Draws constellations from a JSON file on a canvas, with interactive edge blocking and constellation selector."""
 
@@ -53,6 +59,70 @@ class StarMapApp:
         self.canvas.bind("<Button-1>", self.on_canvas_click)
 
         self.root.mainloop()
+
+    def open_path_window(self):
+            """Abre una ventana para seleccionar origen y destino, y ejecutar Bellman-Ford."""
+            import tkinter.messagebox as msg
+
+            win = tk.Toplevel(self.root)
+            win.title("Recorrido del Burro (Bellman-Ford)")
+            win.geometry("350x220")
+            win.configure(bg="black")
+
+            tk.Label(win, text="Selecciona estrella origen:", fg="white", bg="black").pack(pady=(15, 5))
+            origin_combo = ttk.Combobox(win, width=25, state="readonly")
+
+            tk.Label(win, text="Selecciona estrella destino:", fg="white", bg="black").pack(pady=(10, 5))
+            target_combo = ttk.Combobox(win, width=25, state="readonly")
+
+            all_stars = []
+            for c in self.constellations:
+                for s in c["starts"]:
+                    all_stars.append((s["id"], s["label"]))
+
+            origin_combo["values"] = [f"{sid} - {label}" for sid, label in all_stars]
+            target_combo["values"] = [f"{sid} - {label}" for sid, label in all_stars]
+
+            origin_combo.pack()
+            target_combo.pack()
+
+            def run_bellman():
+                if not origin_combo.get() or not target_combo.get():
+                    msg.showwarning("Advertencia", "Selecciona origen y destino.")
+                    return
+
+                try:
+                    source_id = int(origin_combo.get().split(" - ")[0])
+                    target_id = int(target_combo.get().split(" - ")[0])
+
+                    # Construir el grafo respetando bloqueos
+                    nodes, edges = build_graph_from_loader(self.loader, self.blocked_paths)
+
+                    # Ejecutar Bellman-Ford
+                    bf = BellmanFord(nodes, edges)
+                    dist, prev = bf.run(source_id)
+                    path = bf.rebuild_path(prev, target_id)
+
+                    # Mostrar resultado
+                    msg.showinfo("Recorrido exitoso", f"Camino: {path}\nDistancia total: {dist[target_id]:.2f}")
+
+                    # 🔥 Dibujar el camino en rojo
+                    self.highlight_path(path)
+
+                except NegativeCycleError:
+                    msg.showerror("Error", "Se detectó un ciclo negativo.")
+                except Exception as e:
+                    msg.showerror("Error", f"Ocurrió un problema:\n{e}")
+
+            tk.Button(win, text="Ejecutar Recorrido", bg="green", fg="white", command=run_bellman).pack(pady=20)
+
+    def highlight_path(self, path):
+        """Resalta el recorrido en el canvas."""
+        for i in range(len(path) - 1):
+            pair = tuple(sorted((path[i], path[i + 1])))
+            for line, p in self.line_items.items():
+                if p == pair:
+                    self.canvas.itemconfig(line, fill="red", width=4)
 
     def scale(self, x, y):
         """Escala coordenadas 0–200 → 0–600 px."""
@@ -145,6 +215,16 @@ class StarMapApp:
         )
         config_btn.pack(anchor = "w", pady = (10,0), fill = "x")
 
+        config_btn.pack(anchor = "w", pady = (10,0), fill = "x")
+        path_btn = tk.Button(
+            panel,
+            text="Ejecutar Recorrido",
+            bg="green",
+            fg="white",
+            command=self.open_path_window
+        )
+        path_btn.pack(anchor="w", pady=(5, 0), fill="x")
+
     def on_canvas_click(self, event):
         """Detecta clic sobre una línea y alterna su estado."""
         item = self.canvas.find_closest(event.x, event.y)[0]
@@ -180,7 +260,7 @@ class StarMapApp:
         config_win.geometry("450x600")
         config_win.configure(bg="black")
 
-        # 📂 Si existe un JSON previo, lo cargamos para mantener los datos actualizados
+        # Si existe un JSON previo, lo cargamos para mantener los datos actualizados
         star_values_path = os.path.join(os.getcwd(), "data", "star_values.json")
         saved_values = {}
         if os.path.exists(star_values_path):
