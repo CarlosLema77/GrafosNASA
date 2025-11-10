@@ -1,5 +1,5 @@
 from typing import Iterable
-from edge import Edge
+from ..edge import Edge
 
 
 def __init__(self, nodes: Iterable[int], edges: Iterable[Edge]):
