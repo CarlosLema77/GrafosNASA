@@ -91,6 +91,20 @@ class JsonLoader:
     def find_shared_stars(self):
         """List of stars appearing in multiple constellations."""
         return [sid for sid, consts in self._star_to_constellations.items() if len(consts) > 1]
+    
+    def update_star_values(self, updated_values: dict):
+        """Actualiza timeToEat y amountOfEnergy en memoria."""
+        for constellation in self.data["constellations"]:
+            for star in constellation["starts"]:
+                sid = int(star["id"])
+                if sid in updated_values:
+                    star.update(updated_values[sid])
+
+    def save(self):
+        """Guarda el estado actual del JSON."""
+        with self.file_path.open("w", encoding="utf-8") as f:
+            json.dump(self.data, f, indent=4, ensure_ascii=False)
+
 
 if __name__ == "__main__":
     loader = JsonLoader("data/Constellations.json")
