@@ -1,28 +1,42 @@
 # src/core/hypergiants.py
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional, Iterable
+from typing import Dict, List, Tuple, Optional, Iterable, Callable
 
-# ---------------------------------------------------------------------------
-#  Hipergigantes – utilidades de dominio
-#  - Se detectan por el flag JSON:  "hypergiant": true
-#  - Reglas del PDF:
-#       • Máximo 2 por galaxia.
-#       • Permiten "saltar" a otra galaxia (elige el científico el destino).
-#       • Al pasar por una hipergigante:
-#             +50% de la burroenergía actual (cap 100%)
-#             duplica el pasto en bodega
-# ---------------------------------------------------------------------------
+# =============================================================================
+#  HIPERGIANTES – utilidades de dominio
+# -----------------------------------------------------------------------------
+#  • Detección desde el JSON vía flag:          "hypergiant": true/false
+#  • Reglas del PDF:
+#       - Máximo 2 por galaxia (validación utilitaria incluida).
+#       - Permiten “saltar” a otra galaxia (el científico elige el destino).
+#       - Al pasar por una hipergigante:
+#            +50% de la BURROENERGÍA ACTUAL (cap 100%)
+#            Duplica el PASTO en bodega.
+#
+#  Nota de integración:
+#   - No modifica el grafo: el “salto” es una decisión de alto nivel
+#     (simulador/UI) y este módulo solo aplica efectos y sugiere destinos.
+#   - Espera que 'loader' sea algo tipo JsonLoader con .data (dict) cargado.
+#   - Espera un objeto 'burro' con atributos: energia (0-100) y pasto_kg (float).
+# =============================================================================
+
+
+# =============================================================================
+#  Modelo base
+# =============================================================================
 
 @dataclass(frozen=True)
 class Hypergiant:
+    """Representa una estrella hipergigante detectada en el JSON."""
     star_id: int
     label: str
-    galaxy_id: Optional[int]  # puede venir None si no está en el JSON
-    # puedes guardar más campos si quieres mostrarlos en la UI
+    galaxy_id: Optional[int]  # Puede ser None si el JSON no lo trae
 
 
-# ----- Detección & validación ------------------------------------------------
+# =============================================================================
+#  Detección & validación desde JSON
+# =============================================================================
 
 def is_hypergiant(star: dict) -> bool:
     """True si la estrella del JSON está marcada como hipergigante."""
@@ -31,8 +45,16 @@ def is_hypergiant(star: dict) -> bool:
 
 def collect_hypergiants(loader) -> List[Hypergiant]:
     """
-    Escanea el JSON cargado por el JsonLoader y regresa todas
-    las hipergigantes como objetos Hypergiant.
+    Escanea el JSON del loader y regresa todas las hipergigantes como objetos Hypergiant.
+    Estructura esperada (ejemplo):
+      {
+        "id": 42,
+        "label": "KrakenGamma",
+        "coordenates": { "x": 15, "y": 190 },
+        "hypergiant": true,
+        "galaxy_id": 1,
+        ...
+      }
     """
     result: List[Hypergiant] = []
     for const in loader.data.get("constellations", []):
@@ -50,8 +72,7 @@ def collect_hypergiants(loader) -> List[Hypergiant]:
 
 def validate_by_galaxy(hgs: Iterable[Hypergiant]) -> Dict[Optional[int], List[Hypergiant]]:
     """
-    Agrupa por galaxy_id y sirve para validar que no haya más de 2
-    hipergigantes por galaxia (regresa el índice por galaxia).
+    Agrupa hipergigantes por galaxy_id. Útil para reportes/validaciones en UI.
     """
     by_galaxy: Dict[Optional[int], List[Hypergiant]] = {}
     for hg in hgs:
@@ -61,8 +82,8 @@ def validate_by_galaxy(hgs: Iterable[Hypergiant]) -> Dict[Optional[int], List[Hy
 
 def check_rule_max_two_per_galaxy(hgs: Iterable[Hypergiant]) -> List[str]:
     """
-    Devuelve una lista de advertencias (strings) si alguna galaxia
-    excede el máximo de 2 hipergigantes.
+    Devuelve advertencias si alguna galaxia excede el máximo de 2 hipergigantes.
+    (No lanza excepción: deja la decisión a la UI/Simulador).
     """
     warnings: List[str] = []
     grouped = validate_by_galaxy(hgs)
@@ -75,20 +96,25 @@ def check_rule_max_two_per_galaxy(hgs: Iterable[Hypergiant]) -> List[str]:
     return warnings
 
 
-# ----- Efecto de pasar por una hipergigante ----------------------------------
+# =============================================================================
+#  Efectos en el Burro al tocar una hipergigante
+# =============================================================================
 
 def apply_hypergiant_effects(burro) -> None:
     """
     Aplica los efectos cuando el burro llega a una hipergigante:
-      - +50% de su energía ACTUAL (cap 100)
-      - Duplica el pasto en bodega
+      - +50% de su energía ACTUAL (cap 100).
+      - Duplica el pasto en bodega.
     """
-    # +50% de lo que tenga actualmente
+    # +50% de lo que tenga actualmente (ej: 40% → 60%; 80% → 100% por cap)
     burro.energia = min(100.0, burro.energia + 0.5 * burro.energia)
+    # Duplicar pasto
     burro.pasto_kg *= 2.0
 
 
-# ----- Listado de destinos para el salto -------------------------------------
+# =============================================================================
+#  Listado de destinos de salto
+# =============================================================================
 
 def list_jump_destinations(
     loader,
@@ -96,41 +122,50 @@ def list_jump_destinations(
     current_galaxy_id: Optional[int],
 ) -> List[Tuple[int, str, Optional[int]]]:
     """
-    Devuelve (star_id, label, galaxy_id) de posibles destinos de salto.
-    Por defecto lista **todas** las estrellas en galaxias DISTINTAS
-    a la actual (no limita a dos galaxias; si necesitas otra regla, cámbiala
-    aquí cuando integres el simulador).
+    Devuelve una lista de posibles destinos de salto en forma de tuplas:
+      (star_id, label, galaxy_id)
+    Regla base:
+      - Proponer estrellas en galaxias DISTINTAS a la actual.
+    La UI podrá filtrar/ordenar y dejar elegir al científico.
     """
     options: List[Tuple[int, str, Optional[int]]] = []
     for const in loader.data.get("constellations", []):
         for s in const.get("starts", []):
+            sid = int(s["id"])
+            if sid == current_star_id:
+                continue
             gid = s.get("galaxy_id")
-            if int(s["id"]) == current_star_id:
-                continue
             if gid == current_galaxy_id:
-                # salto debe ir a una galaxia distinta
+                # Salto intergaláctico: evitar misma galaxia
                 continue
-            options.append((int(s["id"]), str(s.get("label", s["id"])), gid))
-    # ordénalo por (galaxy_id, label) para que la UI lo muestre ordenado
+            options.append((sid, str(s.get("label", sid)), gid))
+
+    # Orden estable: por (galaxy_id, label) para mostrar bonito en la UI
     options.sort(key=lambda t: (t[2], t[1]))
     return options
 
 
-# ----- Helper de “saltar” (sin mover el grafo) --------------------------------
+# =============================================================================
+#  Helper de “salto” (no mueve grafo, solo aplica efectos y notifica)
+# =============================================================================
 
 def perform_hyperjump(
     burro,
     destination_star_id: int,
-    on_before_jump=None,
-    on_after_jump=None,
+    on_before_jump: Optional[Callable[[], None]] = None,
+    on_after_jump: Optional[Callable[[], None]] = None,
 ) -> int:
     """
     Hook para el simulador/UI:
-      - Llama on_before_jump() si se provee (para registrar/loggear).
-      - Aplica efectos de hipergigante.
-      - Retorna el ID de la estrella destino (para que el simulador
-        sitúe al burro ahí y continúe el recorrido).
-    Nota: no modifica el grafo; sólo devuelve el destino acordado.
+      - (Opcional) Llama on_before_jump() para loggear/avisar.
+      - Aplica efectos de hipergigante (energía y pasto).
+      - (Opcional) Llama on_after_jump() para cerrar logs/updates.
+      - Retorna el ID de la estrella destino para que el simulador
+        sitúe al burro allí y continúe la ruta.
+
+    Importante:
+      - Este helper no altera el grafo ni verifica bloqueos.
+      - La decisión “a qué estrella saltar” se toma fuera (UI/Sim).
     """
     if callable(on_before_jump):
         on_before_jump()

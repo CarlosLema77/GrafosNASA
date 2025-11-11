@@ -1,5 +1,5 @@
 
-from _future_ import annotations
+from __future__ import annotations
 from typing import Iterable, Dict, List, Tuple, Optional, Deque, Set
 from collections import deque, defaultdict
 
