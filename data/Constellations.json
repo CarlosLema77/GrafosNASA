@@ -1,346 +1,592 @@
 {
-  "constellations": [
-    {
-      "name": "Constelación del Burro",
-      "starts": [
+    "constellations": [
         {
-          "id": 1,
-          "label": "BurroAlpha",
-          "linkedTo": [
-            {"starId": 2, "distance": 60},
-            {"starId": 3, "distance": 85},
-            {"starId": 6, "distance": 120}
-          ],
-          "radius": 0.5,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 40, "y": 30},
-          "hypergiant": false
+            "name": "Constelación del Burro",
+            "starts": [
+                {
+                    "id": 1,
+                    "label": "BurroAlpha",
+                    "linkedTo": [
+                        {
+                            "starId": 2,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 3,
+                            "distance": 85
+                        },
+                        {
+                            "starId": 6,
+                            "distance": 120
+                        }
+                    ],
+                    "radius": 0.5,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 40,
+                        "y": 30
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 2,
+                    "label": "BurroBeta",
+                    "linkedTo": [
+                        {
+                            "starId": 1,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 3,
+                            "distance": 35
+                        },
+                        {
+                            "starId": 4,
+                            "distance": 100
+                        }
+                    ],
+                    "radius": 0.6,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 60,
+                        "y": 50
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 3,
+                    "label": "Goku",
+                    "linkedTo": [
+                        {
+                            "starId": 1,
+                            "distance": 85
+                        },
+                        {
+                            "starId": 2,
+                            "distance": 35
+                        },
+                        {
+                            "starId": 5,
+                            "distance": 95
+                        }
+                    ],
+                    "radius": 1.0,
+                    "timeToEat": 1.0,
+                    "amountOfEnergy": 4.0,
+                    "coordenates": {
+                        "x": 80,
+                        "y": 40
+                    },
+                    "hypergiant": true
+                },
+                {
+                    "id": 4,
+                    "label": "BurroDelta",
+                    "linkedTo": [
+                        {
+                            "starId": 2,
+                            "distance": 100
+                        },
+                        {
+                            "starId": 5,
+                            "distance": 45
+                        }
+                    ],
+                    "radius": 0.7,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 55,
+                        "y": 80
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 5,
+                    "label": "BurroOmega",
+                    "linkedTo": [
+                        {
+                            "starId": 3,
+                            "distance": 95
+                        },
+                        {
+                            "starId": 4,
+                            "distance": 45
+                        },
+                        {
+                            "starId": 6,
+                            "distance": 130
+                        }
+                    ],
+                    "radius": 0.8,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 90,
+                        "y": 90
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 6,
+                    "label": "BurroSigma",
+                    "linkedTo": [
+                        {
+                            "starId": 1,
+                            "distance": 120
+                        },
+                        {
+                            "starId": 5,
+                            "distance": 130
+                        }
+                    ],
+                    "radius": 0.4,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 30,
+                        "y": 110
+                    },
+                    "hypergiant": false
+                }
+            ]
         },
         {
-          "id": 2,
-          "label": "BurroBeta",
-          "linkedTo": [
-            {"starId": 1, "distance": 60},
-            {"starId": 3, "distance": 35},
-            {"starId": 4, "distance": 100}
-          ],
-          "radius": 0.6,
-          "timeToEat": 2,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 60, "y": 50},
-          "hypergiant": false
+            "name": "Constelación de la Araña",
+            "starts": [
+                {
+                    "id": 10,
+                    "label": "ArañaAlpha",
+                    "linkedTo": [
+                        {
+                            "starId": 11,
+                            "distance": 70
+                        },
+                        {
+                            "starId": 12,
+                            "distance": 95
+                        },
+                        {
+                            "starId": 3,
+                            "distance": 110
+                        }
+                    ],
+                    "radius": 0.5,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 4.0,
+                    "coordenates": {
+                        "x": 130,
+                        "y": 40
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 11,
+                    "label": "ArañaBeta",
+                    "linkedTo": [
+                        {
+                            "starId": 10,
+                            "distance": 70
+                        },
+                        {
+                            "starId": 12,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 13,
+                            "distance": 90
+                        }
+                    ],
+                    "radius": 0.7,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 150,
+                        "y": 60
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 12,
+                    "label": "ArañaGoku",
+                    "linkedTo": [
+                        {
+                            "starId": 10,
+                            "distance": 95
+                        },
+                        {
+                            "starId": 11,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 13,
+                            "distance": 80
+                        }
+                    ],
+                    "radius": 0.6,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 160,
+                        "y": 35
+                    },
+                    "hypergiant": true
+                },
+                {
+                    "id": 13,
+                    "label": "ArañaOmega",
+                    "linkedTo": [
+                        {
+                            "starId": 11,
+                            "distance": 90
+                        },
+                        {
+                            "starId": 12,
+                            "distance": 80
+                        },
+                        {
+                            "starId": 14,
+                            "distance": 60
+                        }
+                    ],
+                    "radius": 0.8,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 180,
+                        "y": 50
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 14,
+                    "label": "ArañaGamma",
+                    "linkedTo": [
+                        {
+                            "starId": 13,
+                            "distance": 60
+                        }
+                    ],
+                    "radius": 0.4,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 1.0,
+                    "coordenates": {
+                        "x": 190,
+                        "y": 80
+                    },
+                    "hypergiant": false
+                }
+            ]
         },
         {
-          "id": 3,
-          "label": "Goku",
-          "linkedTo": [
-            {"starId": 1, "distance": 85},
-            {"starId": 2, "distance": 35},
-            {"starId": 5, "distance": 95}
-          ],
-          "radius": 1.0,
-          "timeToEat": 1,
-          "amountOfEnergy": 4,
-          "coordenates": {"x": 80, "y": 40},
-          "hypergiant": true
+            "name": "Constelación del Dragón",
+            "starts": [
+                {
+                    "id": 20,
+                    "label": "DracoAlpha",
+                    "linkedTo": [
+                        {
+                            "starId": 21,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 22,
+                            "distance": 70
+                        }
+                    ],
+                    "radius": 0.5,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 40,
+                        "y": 150
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 21,
+                    "label": "Vegeta",
+                    "linkedTo": [
+                        {
+                            "starId": 20,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 23,
+                            "distance": 90
+                        },
+                        {
+                            "starId": 24,
+                            "distance": 130
+                        }
+                    ],
+                    "radius": 0.8,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 4.0,
+                    "coordenates": {
+                        "x": 70,
+                        "y": 170
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 22,
+                    "label": "DracoDelta",
+                    "linkedTo": [
+                        {
+                            "starId": 20,
+                            "distance": 70
+                        },
+                        {
+                            "starId": 23,
+                            "distance": 80
+                        }
+                    ],
+                    "radius": 1.0,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 50,
+                        "y": 190
+                    },
+                    "hypergiant": true
+                },
+                {
+                    "id": 23,
+                    "label": "Nova",
+                    "linkedTo": [
+                        {
+                            "starId": 21,
+                            "distance": 90
+                        },
+                        {
+                            "starId": 22,
+                            "distance": 80
+                        },
+                        {
+                            "starId": 24,
+                            "distance": 70
+                        }
+                    ],
+                    "radius": 0.6,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 100,
+                        "y": 160
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 24,
+                    "label": "DracoOmega",
+                    "linkedTo": [
+                        {
+                            "starId": 21,
+                            "distance": 130
+                        },
+                        {
+                            "starId": 23,
+                            "distance": 70
+                        },
+                        {
+                            "starId": 5,
+                            "distance": 140
+                        }
+                    ],
+                    "radius": 0.7,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 120,
+                        "y": 190
+                    },
+                    "hypergiant": false
+                }
+            ]
         },
         {
-          "id": 4,
-          "label": "BurroDelta",
-          "linkedTo": [
-            {"starId": 2, "distance": 100},
-            {"starId": 5, "distance": 45}
-          ],
-          "radius": 0.7,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 55, "y": 80},
-          "hypergiant": false
+            "name": "Constelación del Colibrí",
+            "starts": [
+                {
+                    "id": 30,
+                    "label": "ColibriAlpha",
+                    "linkedTo": [
+                        {
+                            "starId": 31,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 32,
+                            "distance": 90
+                        }
+                    ],
+                    "radius": 0.5,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 160,
+                        "y": 120
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 31,
+                    "label": "Luffy",
+                    "linkedTo": [
+                        {
+                            "starId": 30,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 32,
+                            "distance": 45
+                        },
+                        {
+                            "starId": 33,
+                            "distance": 70
+                        }
+                    ],
+                    "radius": 1.0,
+                    "timeToEat": 1.0,
+                    "amountOfEnergy": 4.0,
+                    "coordenates": {
+                        "x": 140,
+                        "y": 140
+                    },
+                    "hypergiant": true
+                },
+                {
+                    "id": 32,
+                    "label": "Zoro",
+                    "linkedTo": [
+                        {
+                            "starId": 30,
+                            "distance": 90
+                        },
+                        {
+                            "starId": 31,
+                            "distance": 45
+                        },
+                        {
+                            "starId": 33,
+                            "distance": 50
+                        }
+                    ],
+                    "radius": 0.7,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 170,
+                        "y": 150
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 33,
+                    "label": "Sanji",
+                    "linkedTo": [
+                        {
+                            "starId": 31,
+                            "distance": 70
+                        },
+                        {
+                            "starId": 32,
+                            "distance": 50
+                        }
+                    ],
+                    "radius": 0.6,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 190,
+                        "y": 170
+                    },
+                    "hypergiant": false
+                }
+            ]
         },
         {
-          "id": 5,
-          "label": "BurroOmega",
-          "linkedTo": [
-            {"starId": 3, "distance": 95},
-            {"starId": 4, "distance": 45},
-            {"starId": 6, "distance": 130}
-          ],
-          "radius": 0.8,
-          "timeToEat": 3,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 90, "y": 90},
-          "hypergiant": false
-        },
-        {
-          "id": 6,
-          "label": "BurroSigma",
-          "linkedTo": [
-            {"starId": 1, "distance": 120},
-            {"starId": 5, "distance": 130}
-          ],
-          "radius": 0.4,
-          "timeToEat": 2,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 30, "y": 110},
-          "hypergiant": false
+            "name": "Constelación del Kraken",
+            "starts": [
+                {
+                    "id": 40,
+                    "label": "KrakenAlpha",
+                    "linkedTo": [
+                        {
+                            "starId": 41,
+                            "distance": 80
+                        },
+                        {
+                            "starId": 42,
+                            "distance": 100
+                        }
+                    ],
+                    "radius": 0.8,
+                    "timeToEat": 3.0,
+                    "amountOfEnergy": 2.0,
+                    "coordenates": {
+                        "x": 20,
+                        "y": 160
+                    },
+                    "hypergiant": false
+                },
+                {
+                    "id": 41,
+                    "label": "KrakenBeta",
+                    "linkedTo": [
+                        {
+                            "starId": 40,
+                            "distance": 80
+                        },
+                        {
+                            "starId": 42,
+                            "distance": 60
+                        },
+                        {
+                            "starId": 3,
+                            "distance": 150
+                        }
+                    ],
+                    "radius": 1.0,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 4.0,
+                    "coordenates": {
+                        "x": 45,
+                        "y": 130
+                    },
+                    "hypergiant": true
+                },
+                {
+                    "id": 42,
+                    "label": "KrakenGamma",
+                    "linkedTo": [
+                        {
+                            "starId": 40,
+                            "distance": 100
+                        },
+                        {
+                            "starId": 41,
+                            "distance": 60
+                        }
+                    ],
+                    "radius": 0.6,
+                    "timeToEat": 2.0,
+                    "amountOfEnergy": 3.0,
+                    "coordenates": {
+                        "x": 15,
+                        "y": 190
+                    },
+                    "hypergiant": false
+                }
+            ]
         }
-      ]
-    },
-    {
-      "name": "Constelación de la Araña",
-      "starts": [
-        {
-          "id": 10,
-          "label": "ArañaAlpha",
-          "linkedTo": [
-            {"starId": 11, "distance": 70},
-            {"starId": 12, "distance": 95},
-            {"starId": 3, "distance": 110}
-          ],
-          "radius": 0.5,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 130, "y": 40},
-          "hypergiant": false
-        },
-        {
-          "id": 11,
-          "label": "ArañaBeta",
-          "linkedTo": [
-            {"starId": 10, "distance": 70},
-            {"starId": 12, "distance": 60},
-            {"starId": 13, "distance": 90}
-          ],
-          "radius": 0.7,
-          "timeToEat": 2,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 150, "y": 60},
-          "hypergiant": false
-        },
-        {
-          "id": 12,
-          "label": "ArañaGoku",
-          "linkedTo": [
-            {"starId": 10, "distance": 95},
-            {"starId": 11, "distance": 60},
-            {"starId": 13, "distance": 80}
-          ],
-          "radius": 0.6,
-          "timeToEat": 2,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 160, "y": 35},
-          "hypergiant": true
-        },
-        {
-          "id": 13,
-          "label": "ArañaOmega",
-          "linkedTo": [
-            {"starId": 11, "distance": 90},
-            {"starId": 12, "distance": 80},
-            {"starId": 14, "distance": 60}
-          ],
-          "radius": 0.8,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 180, "y": 50},
-          "hypergiant": false
-        },
-        {
-          "id": 14,
-          "label": "ArañaGamma",
-          "linkedTo": [
-            {"starId": 13, "distance": 60}
-          ],
-          "radius": 0.4,
-          "timeToEat": 3,
-          "amountOfEnergy": 1,
-          "coordenates": {"x": 190, "y": 80},
-          "hypergiant": false
-        }
-      ]
-    },
-    {
-      "name": "Constelación del Dragón",
-      "starts": [
-        {
-          "id": 20,
-          "label": "DracoAlpha",
-          "linkedTo": [
-            {"starId": 21, "distance": 60},
-            {"starId": 22, "distance": 70}
-          ],
-          "radius": 0.5,
-          "timeToEat": 2,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 40, "y": 150},
-          "hypergiant": false
-        },
-        {
-          "id": 21,
-          "label": "Vegeta",
-          "linkedTo": [
-            {"starId": 20, "distance": 60},
-            {"starId": 23, "distance": 90},
-            {"starId": 24, "distance": 130}
-          ],
-          "radius": 0.8,
-          "timeToEat": 2,
-          "amountOfEnergy": 4,
-          "coordenates": {"x": 70, "y": 170},
-          "hypergiant": false
-        },
-        {
-          "id": 22,
-          "label": "DracoDelta",
-          "linkedTo": [
-            {"starId": 20, "distance": 70},
-            {"starId": 23, "distance": 80}
-          ],
-          "radius": 1.0,
-          "timeToEat": 3,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 50, "y": 190},
-          "hypergiant": true
-        },
-        {
-          "id": 23,
-          "label": "Nova",
-          "linkedTo": [
-            {"starId": 21, "distance": 90},
-            {"starId": 22, "distance": 80},
-            {"starId": 24, "distance": 70}
-          ],
-          "radius": 0.6,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 100, "y": 160},
-          "hypergiant": false
-        },
-        {
-          "id": 24,
-          "label": "DracoOmega",
-          "linkedTo": [
-            {"starId": 21, "distance": 130},
-            {"starId": 23, "distance": 70},
-            {"starId": 5, "distance": 140}
-          ],
-          "radius": 0.7,
-          "timeToEat": 2,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 120, "y": 190},
-          "hypergiant": false
-        }
-      ]
-    },
-    {
-      "name": "Constelación del Colibrí",
-      "starts": [
-        {
-          "id": 30,
-          "label": "ColibriAlpha",
-          "linkedTo": [
-            {"starId": 31, "distance": 60},
-            {"starId": 32, "distance": 90}
-          ],
-          "radius": 0.5,
-          "timeToEat": 2,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 160, "y": 120},
-          "hypergiant": false
-        },
-        {
-          "id": 31,
-          "label": "Luffy",
-          "linkedTo": [
-            {"starId": 30, "distance": 60},
-            {"starId": 32, "distance": 45},
-            {"starId": 33, "distance": 70}
-          ],
-          "radius": 1.0,
-          "timeToEat": 1,
-          "amountOfEnergy": 4,
-          "coordenates": {"x": 140, "y": 140},
-          "hypergiant": true
-        },
-        {
-          "id": 32,
-          "label": "Zoro",
-          "linkedTo": [
-            {"starId": 30, "distance": 90},
-            {"starId": 31, "distance": 45},
-            {"starId": 33, "distance": 50}
-          ],
-          "radius": 0.7,
-          "timeToEat": 2,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 170, "y": 150},
-          "hypergiant": false
-        },
-        {
-          "id": 33,
-          "label": "Sanji",
-          "linkedTo": [
-            {"starId": 31, "distance": 70},
-            {"starId": 32, "distance": 50}
-          ],
-          "radius": 0.6,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 190, "y": 170},
-          "hypergiant": false
-        }
-      ]
-    },
-    {
-      "name": "Constelación del Kraken",
-      "starts": [
-        {
-          "id": 40,
-          "label": "KrakenAlpha",
-          "linkedTo": [
-            {"starId": 41, "distance": 80},
-            {"starId": 42, "distance": 100}
-          ],
-          "radius": 0.8,
-          "timeToEat": 3,
-          "amountOfEnergy": 2,
-          "coordenates": {"x": 20, "y": 160},
-          "hypergiant": false
-        },
-        {
-          "id": 41,
-          "label": "KrakenBeta",
-          "linkedTo": [
-            {"starId": 40, "distance": 80},
-            {"starId": 42, "distance": 60},
-            {"starId": 3, "distance": 150}
-          ],
-          "radius": 1.0,
-          "timeToEat": 2,
-          "amountOfEnergy": 4,
-          "coordenates": {"x": 45, "y": 130},
-          "hypergiant": true
-        },
-        {
-          "id": 42,
-          "label": "KrakenGamma",
-          "linkedTo": [
-            {"starId": 40, "distance": 100},
-            {"starId": 41, "distance": 60}
-          ],
-          "radius": 0.6,
-          "timeToEat": 2,
-          "amountOfEnergy": 3,
-          "coordenates": {"x": 15, "y": 190},
-          "hypergiant": false
-        }
-      ]
-    }
-  ],
-  "burroenergiaInicial": 100,
-  "estadoSalud": "Excelente",
-  "pasto": 300,
-  "startAge": 12,
-  "deathAge": 3567
+    ],
+    "burroenergiaInicial": 100,
+    "estadoSalud": "Excelente",
+    "pasto": 300,
+    "startAge": 12,
+    "deathAge": 3567
 }

@@ -6,12 +6,20 @@ import random
 from src.core.json_loader import JsonLoader
 from src.core.graph_utils import build_graph_from_loader, get_path_edges
 from src.algorythmes.bellman_ford.bellman_algor import BellmanFord, NegativeCycleError
+from src.algorythmes.floyd_warshall.floyd_algor import FloydWarshall, build_graph_from_loader as build_fw_graph
+
+
+
+
+from src.ui.animations.animations import StarMapAnimator
+
 
 
 class StarMapApp:
     """Interfaz gráfica principal del Mapa de Constelaciones (NASA Burro Edition)."""
 
     def __init__(self, json_path: str):
+
         # --- Configuración base ---
         self.root = tk.Tk()
         self.root.title("Mapa de Constelaciones (NASA Burro Edition)")
@@ -24,11 +32,6 @@ class StarMapApp:
         self.constellations = self.loader.get_constellations()
         self.shared_stars = self.loader.find_shared_stars()
         self.blocked_paths = set()
-
-        self.colors = ["cyan", "yellow", "orange", "violet", "lime", "white"]
-        random.shuffle(self.colors)
-        self.line_items = {}
-        self.line_colors = {}
 
         # Colores y estructuras
         self.colors = ["cyan", "yellow", "orange", "violet", "lime", "white", "magenta", "gold", "deepskyblue"]
@@ -58,6 +61,9 @@ class StarMapApp:
         self.canvas = tk.Canvas(self.root, width=700, height=720, bg="black")
         self.canvas.place(x=6, y=50)
         self.canvas.bind("<Button-1>", self.on_canvas_click)
+
+        # --- Animador ---
+        self.animator = StarMapAnimator(self.canvas, self.loader, self.root, self.scale)
 
 
         # --- Panel lateral ---
@@ -105,6 +111,7 @@ class StarMapApp:
             fg="white",
             command=self.open_path_window
         ).pack(anchor="w", pady=(5, 0), fill="x")
+
     def scale(self, x, y):
         """Escala coordenadas 0–200 → 0–600 px."""
         return x * 3, y * 3
@@ -115,16 +122,24 @@ class StarMapApp:
         self.line_items.clear()
         self.line_colors.clear()
 
-        # ✅ Dibuja el plano cartesiano antes de las constelaciones
+        # Dibuja el plano cartesiano antes de las constelaciones
         self.draw_grid()
 
-        # Filtrar constelaciones a dibujar
+        # 🔹 Asegurar que cada constelación tenga un color único persistente
+        if not hasattr(self, "constellation_colors"):
+            self.constellation_colors = {}
+
+        for constellation in self.constellations:
+            if constellation["name"] not in self.constellation_colors:
+                self.constellation_colors[constellation["name"]] = self._get_constellation_color(constellation["name"])
+
+        # 🔹 Filtrar constelaciones a dibujar
         consts_to_draw = (
             self.constellations if selected in (None, "Todas")
             else [c for c in self.constellations if c["name"] == selected]
         )
 
-        # Mapa global de colores por estrella (usando el color fijo)
+        # 🔹 Mapa global de colores por estrella
         color_by_star = {}
         for c in self.constellations:
             color = self.constellation_colors.get(c["name"], "white")
@@ -142,7 +157,7 @@ class StarMapApp:
                         x2, y2 = self.scale(target["coordenates"]["x"], target["coordenates"]["y"])
                         pair = tuple(sorted((star["id"], link["starId"])))
 
-                        # 🔹 Si el camino está bloqueado, aplicar estilo visual distinto
+                        # 🔸 Si el camino está bloqueado, mostrarlo en gris punteado
                         if pair in self.blocked_paths:
                             line = self.canvas.create_line(
                                 x1, y1, x2, y2,
@@ -184,6 +199,7 @@ class StarMapApp:
             x, y = self.scale(star["coordenates"]["x"], star["coordenates"]["y"])
             radius = star["radius"] * 5
 
+            # 🔴 Si es una estrella compartida entre constelaciones → rojo
             fill_color = "red" if sid in self.shared_stars else info["color"]
 
             self.canvas.create_oval(
@@ -191,6 +207,15 @@ class StarMapApp:
                 fill=fill_color, outline=""
             )
             self.canvas.create_text(x + 10, y, text=star["label"], fill="white", anchor="w")
+
+    def _get_constellation_color(self, name):
+        """Genera un color único para cada constelación basado en su nombre."""
+        import random
+        random.seed(hash(name) % 10000)
+        r = random.randint(80, 255)
+        g = random.randint(80, 200)
+        b = random.randint(150, 255)
+        return f"#{r:02x}{g:02x}{b:02x}"
 
 
     def draw_grid(self, step=20, size=235):
@@ -229,7 +254,11 @@ class StarMapApp:
     # Interacciones
     def on_canvas_click(self, event):
         """Alterna el bloqueo de una arista al hacer clic."""
-        item = self.canvas.find_closest(event.x, event.y)[0]
+        found = self.canvas.find_closest(event.x, event.y)
+        if not found:
+                return
+        item = found[0]
+
         if item not in self.line_items:
             return
 
@@ -249,56 +278,164 @@ class StarMapApp:
         self.selected_constellation = selected
         self.draw_constellations(selected)
 
-    # 🔹 Bellman-Ford
+    # Ventana de selección de recorrido
     def open_path_window(self):
+        # Antes de iniciar un nuevo recorrido, borrar el anterior
+        if self.animator.burro_icon:
+            self.canvas.delete(self.animator.burro_icon)
+            self.animator.burro_icon = None
+        self.draw_constellations(self.selected_constellation)
+
+
         win = tk.Toplevel(self.root)
-        win.title("Recorrido del Burro (Bellman-Ford)")
-        win.geometry("350x220")
+        win.title("Recorridos del Burro")
+        win.geometry("350x300")
         win.configure(bg="black")
 
-        origin_combo, target_combo = self._create_path_selector_ui(win)
+        # Crear la UI completa (origen, destino, tipo y botón)
+        self._create_path_selector_ui(win)
 
-        if origin_combo["values"]:
-            origin_combo.set(origin_combo["values"][0])
-            target_combo.set(target_combo["values"][-1])
-
-        tk.Button(
-            win, text="Ejecutar Recorrido", bg="green", fg="white",
-            command=lambda: self._run_bellman(win, origin_combo, target_combo)
-        ).pack(pady=20)
 
     def _create_path_selector_ui(self, win):
+        """Crea el panel para seleccionar origen, destino y tipo de recorrido."""
         stars = self.get_filtered_stars()
+
+        # --- Selector de origen ---
         tk.Label(win, text="Selecciona estrella origen:", fg="white", bg="black").pack(pady=(15, 5))
         origin = ttk.Combobox(win, width=25, state="readonly")
         origin["values"] = [f"{sid} - {label}" for sid, label in stars]
         origin.pack()
 
+        # --- Selector de destino ---
         tk.Label(win, text="Selecciona estrella destino:", fg="white", bg="black").pack(pady=(10, 5))
         target = ttk.Combobox(win, width=25, state="readonly")
         target["values"] = [f"{sid} - {label}" for sid, label in stars]
         target.pack()
 
+        # --- Selector de tipo de recorrido ---
+        tk.Label(win, text="Tipo de recorrido:", bg="black", fg="white", font=("Arial", 10, "bold")).pack(pady=(10, 0))
+
+        route_type = ttk.Combobox(
+            win,
+            state="readonly",
+            values=[
+                "Bellman-Ford",
+                "Floyd-Warshall"
+            ]
+        )
+        route_type.current(0)
+        route_type.pack(pady=(5, 10))
+
+        # --- Botón de ejecución ---
+        def execute_route():
+            """Obtiene selección y ejecuta el algoritmo elegido."""
+            start_val = origin.get()
+            end_val = target.get()
+            route_val = route_type.get()
+
+            if not start_val or not end_val:
+                messagebox.showwarning("Campos vacíos", "Debe seleccionar ambas estrellas.")
+                return
+
+            self.run_selected_route(start_val, end_val, route_val)
+
+        tk.Button(
+            win,
+            text="Ejecutar recorrido",
+            command=execute_route,
+            bg="green",
+            fg="white",
+            relief="flat"
+        ).pack(pady=(10, 15))
+
         return origin, target
 
-    def _run_bellman(self, _win, origin_combo, target_combo):
-        if not origin_combo.get() or not target_combo.get():
-            messagebox.showwarning("Advertencia", "Selecciona origen y destino.")
-            return
+    def run_selected_route(self, start, end, route_type):
+        """Ejecuta el recorrido seleccionado según tipo."""
+        # Extraer solo el ID de las estrellas (antes del guion)
+        start_id = start.split(" - ")[0].strip()
+        end_id = end.split(" - ")[0].strip()
 
+        if "Bellman" in route_type:
+            self._run_bellman(start_id, end_id)
+        elif "Floyd" in route_type:
+            self._run_floyd_warshall(start_id, end_id)
+        else:
+            messagebox.showinfo("Info", f"Algoritmo {route_type} no implementado todavía.")
+
+
+    def _run_bellman(self, source_id, target_id):
+        """Ejecuta el algoritmo Bellman-Ford entre dos estrellas dadas."""
         try:
-            source = int(origin_combo.get().split(" - ")[0])
-            target = int(target_combo.get().split(" - ")[0])
+            # Convertir a int por seguridad
+            source = int(source_id)
+            target = int(target_id)
+
+            # Construir el grafo, respetando los caminos bloqueados
             nodes, edges = build_graph_from_loader(self.loader, self.blocked_paths)
+
+            # Ejecutar Bellman-Ford
             bf = BellmanFord(nodes, edges)
             dist, prev = bf.run(source)
+
+            # Reconstruir el camino desde el predecesor
             path = bf.rebuild_path(prev, target)
-            messagebox.showinfo("Recorrido exitoso", f"Camino: {path}\nDistancia total: {dist[target]:.2f}")
-            self.highlight_path(path)
+
+            # Mostrar resultados
+            if not path:
+                messagebox.showwarning("Sin camino", f"No existe un camino entre {source} y {target}.")
+                return
+
+            total_dist = dist.get(target, float("inf"))
+            messagebox.showinfo(
+                "Recorrido exitoso",
+                f"Camino: {path}\nDistancia total: {total_dist:.2f}"
+            )
+
+            self.animator.animate_path(path, color="red")
+            self.animator.animate_burro(path)
+
         except NegativeCycleError:
-            messagebox.showerror("Error", "Se detectó un ciclo negativo.")
+            messagebox.showerror("Error", "Se detectó un ciclo negativo en el grafo.")
+
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            messagebox.showerror("Error inesperado", str(e))
+
+
+    def _run_floyd_warshall(self, source_id, target_id):
+        """Ejecuta el algoritmo Floyd–Warshall (todos los pares) y muestra el camino más corto entre origen y destino."""
+        try:
+            source = int(source_id)
+            target = int(target_id)
+
+            # Construir grafo desde el loader (usando helper adaptado)
+            nodes, edges = build_fw_graph(self.loader, self.blocked_paths)
+
+            fw = FloydWarshall(nodes, edges)
+            fw.run()
+
+            dist = fw.distance(source, target)
+            path = fw.rebuild_path(source, target)
+
+            if not path:
+                messagebox.showwarning("Sin camino", f"No existe camino entre {source} y {target}.")
+                return
+
+            # Asegurar tipo correcto
+            path = [int(p) for p in path]
+
+            messagebox.showinfo(
+                "Floyd–Warshall",
+                f"Camino más corto entre {source} → {target}:\n{path}\n\nDistancia total: {dist:.2f}"
+            )
+
+            # No llames highlight_path aquí (lo pinta estático)
+            # No llames animate_burro (duplicaría movimiento)
+            self.animator.animate_path(path, color="red")
+        except Exception as e:
+            messagebox.showerror("Error en Floyd–Warshall", str(e))
+
+
 
     def highlight_path(self, path):
         for pair in get_path_edges(path):
@@ -408,6 +545,7 @@ class StarMapApp:
                         stars_in_selected[linked_id] = shared_star["label"]
 
         return sorted(stars_in_selected.items(), key=lambda x: x[1])
+
 
 
 if __name__ == "__main__":
