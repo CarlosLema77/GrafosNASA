@@ -10,6 +10,8 @@ from src.algorythmes.floyd_warshall.floyd_algor import FloydWarshall, build_grap
 from src.algorythmes.report_generator import ReportGenerator
 from src.ui.report_viewer import open_report_window
 from src.core.burro import Burro
+from src.algorythmes.Max_recorrido.max_algor import MaxRoutePlanner
+
 
 from src.ui.animations.animations import StarMapAnimator
 
@@ -133,13 +135,23 @@ class StarMapApp:
             command=self.open_star_config_window
         ).pack(anchor="w", pady=(10, 0), fill="x")
 
+        btn_planificar = tk.Button(
+            panel,
+            text="Buscar mejor ruta",
+            bg="green",
+            fg="white",
+            command=self.buscar_mejor_ruta
+        )
+        btn_planificar.pack(anchor="w", pady=(10, 0), fill="x")
+
         tk.Button(
             panel,
             text="Ejecutar Recorrido",
             bg="green",
             fg="white",
             command=self.open_path_window
-        ).pack(anchor="w", pady=(5, 0), fill="x")
+        ).pack(anchor="w", pady=(10, 0), fill="x")
+
 
         # en tu UI (p.ej. en show_info_panel)
         tk.Button(
@@ -238,7 +250,7 @@ class StarMapApp:
             x, y = self.scale(star["coordenates"]["x"], star["coordenates"]["y"])
             radius = star["radius"] * 5
 
-            # 🔴 Si es una estrella compartida entre constelaciones → rojo
+            # Si es una estrella compartida entre constelaciones → rojo
             fill_color = "red" if sid in self.shared_stars else info["color"]
 
             self.canvas.create_oval(
@@ -407,6 +419,45 @@ class StarMapApp:
             self._run_floyd_warshall(start_id, end_id)
         else:
             messagebox.showinfo("Info", f"Algoritmo {route_type} no implementado todavía.")
+
+    def buscar_mejor_ruta(self):
+        try:
+            # Crear el planificador con el loader actual
+            planner = MaxRoutePlanner(self.loader)
+
+            # Supón que el burro empieza en la primera estrella del JSON
+            start_star_id = 1
+
+            # Sin caminos bloqueados por defecto
+            blocked_paths = set()
+
+            print("🔄 Calculando la mejor ruta...")
+            plan = planner.plan_max_route(
+                start_star_id=start_star_id,
+                real_burro=self.burro,
+                blocked_paths=blocked_paths
+            )
+
+            print("✅ Mejor ruta encontrada:")
+            print(plan["visited_stars"])
+            print(f"🌌 Galaxías visitadas: {plan['visited_galaxies']}")
+            print(f"💚 Vida restante: {plan['life_left_ly']:.2f} ly")
+
+            # Si quieres mostrarla en un cuadro de diálogo:
+            from tkinter import messagebox
+            messagebox.showinfo(
+                "Ruta óptima encontrada",
+                f"Estrellas visitadas:\n{plan['visited_stars']}\n\n"
+                f"Vida restante: {plan['life_left_ly']:.2f} años luz"
+            )
+
+            # Si quieres animarla directamente en el mapa:
+            if "visited_stars" in plan and len(plan["visited_stars"]) > 1:
+                self.animator.animate_path(plan["visited_stars"], color="orange")
+
+        except Exception as e:
+            from tkinter import messagebox
+            messagebox.showerror("Error", f"No se pudo planificar la ruta:\n{e}")
 
 
 

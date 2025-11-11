@@ -14,7 +14,7 @@ from src.core.hypergiants import (
 
 class MaxRoutePlanner:
     """
-    Planificador de ruta máxima (SUGERENCIA):
+    Planificador de ruta máxima:
     - No toca el burro real.
     - Prioriza alcanzar hipergigantes y saltar a galaxias no visitadas.
     - Salto con costo 0 ly y buff sugerido (+50% energía, duplica pasto) en el CLON.
@@ -43,7 +43,7 @@ class MaxRoutePlanner:
         if rng is None:
             rng = random
 
-        # 1) Clon del burro (no ensucia el original)
+        # 1) Clon del burro
         try:
             burro = copy.deepcopy(real_burro)
         except Exception:
@@ -60,15 +60,16 @@ class MaxRoutePlanner:
         if current not in self._star_index:
             raise ValueError(f"start_star_id {current} no existe.")
 
-        visited_stars: Set[int] = Set()
-        visited_galaxies: Set[Optional[int]] = Set()
+        visited_stars: Set[int] = set()
+        visited_galaxies: Set[Optional[int]] = set()
+
         current_galaxy = self._galaxy_of(current)
         visited_galaxies.add(current_galaxy)
         visited_stars.add(current)
 
         # Estructuras de salida
         itinerary: List[Dict] = []
-        recap_rows: List[Dict] = []  # ← para la tabla final “lo que ganó/perdió”
+        recap_rows: List[Dict] = []
         segment = {
             "galaxy_id": current_galaxy,
             "entry_star": current,
@@ -90,14 +91,12 @@ class MaxRoutePlanner:
             )
 
             if next_star is None:
-                # Intentar hipersalto si estoy parado en una hipergigante
                 if is_hypergiant(self._star_index[current]):
                     jump_info = self._try_hyperjump(rng, current_galaxy, visited_galaxies)
                     if not jump_info:
                         itinerary.append(segment)
                         break
 
-                    # Registrar buff en recap (sugerencia, no cambia burro real)
                     before = self._snapshot(burro)
                     apply_hypergiant_effects(burro)
                     after = self._snapshot(burro)
@@ -109,12 +108,10 @@ class MaxRoutePlanner:
                         before=before, after=after
                     ))
 
-                    # Cerrar segmento
                     segment["exit_hypergiant"] = current
                     segment["jump_to"] = {"galaxy_id": jump_info["dest_galaxy"], "landing_hg": jump_info["landing_hg"]}
                     itinerary.append(segment)
 
-                    # Nuevo segmento
                     current_galaxy = jump_info["dest_galaxy"]
                     visited_galaxies.add(current_galaxy)
                     current = jump_info["landing_hg"]
@@ -132,19 +129,17 @@ class MaxRoutePlanner:
                 itinerary.append(segment)
                 break
 
-            # Avance normal dentro de la galaxia
             dist = self._edge_distance(adj, current, next_star)
             if dist is None:
                 itinerary.append(segment)
                 break
 
-            if burro.vida_restantes <= 0 or (burro.vida_restantes - dist) < 0:
+            if burro.vida_restante <= 0 or (burro.vida_restante - dist) < 0:
                 itinerary.append(segment)
                 break
 
-            # Registrar deltas del tramo
             before = self._snapshot(burro)
-            burro.viajar(dist)  # tu lógica real: resta vida, etc.
+            burro.viajar(dist)
             after = self._snapshot(burro)
 
             recap_rows.append(self._mk_recap_row_move(
@@ -159,11 +154,9 @@ class MaxRoutePlanner:
             visited_stars.add(current)
             segment["path"].append(current)
 
-            # Si caigo en hipergigante → salto ASAP
             if is_hypergiant(self._star_index[current]):
                 jump_info = self._try_hyperjump(rng, current_galaxy, visited_galaxies)
                 if jump_info:
-                    # Buff por hipergigante (en CLON)
                     before = self._snapshot(burro)
                     apply_hypergiant_effects(burro)
                     after = self._snapshot(burro)
@@ -201,14 +194,13 @@ class MaxRoutePlanner:
             "per_galaxy": itinerary,
             "visited_stars": [sid for seg in itinerary for sid in seg["path"]],
             "visited_galaxies": list(visited_galaxies),
-            "life_left_ly": float(burro.vida_restantes),
+            "life_left_ly": float(burro.vida_restante),
             "sim_burro": {
                 "energia": float(burro.energia),
                 "pasto_kg": float(burro.pasto_kg),
                 "edad_actual": float(burro.edad_actual),
-                "vida_restante": float(burro.vida_restantes),
+                "vida_restante": float(burro.vida_restante),
             },
-            # 🔹 Resumen listo para la tabla de UI (solo recap, nada persistido)
             "recap": recap_rows
         }
 
@@ -222,7 +214,7 @@ class MaxRoutePlanner:
                 continue
             if self._galaxy_of(v) != current_galaxy:
                 continue
-            if d > burro.vida_restantes:
+            if d > burro.vida_restante:
                 continue
             star = self._star_index.get(v)
             if not star:
@@ -270,7 +262,7 @@ class MaxRoutePlanner:
         return {
             "energia": float(burro.energia),
             "pasto_kg": float(burro.pasto_kg),
-            "vida": float(burro.vida_restantes),
+            "vida": float(burro.vida_restante),
             "edad": float(burro.edad_actual),
         }
 
@@ -286,7 +278,7 @@ class MaxRoutePlanner:
             "detalle": f"Llegó a {lab} (−vida {distance:.1f} ly)",
             "delta_energia": after["energia"] - before["energia"],
             "delta_pasto": after["pasto_kg"] - before["pasto_kg"],
-            "delta_vida": after["vida"] - before["vida"],  # será negativo por viajar
+            "delta_vida": after["vida"] - before["vida"],
         }
 
     def _mk_recap_row_buff(self, galaxy_id, from_star, to_star, note, before, after):
@@ -300,5 +292,5 @@ class MaxRoutePlanner:
             "detalle": f"{lab}: {note}",
             "delta_energia": after["energia"] - before["energia"],
             "delta_pasto": after["pasto_kg"] - before["pasto_kg"],
-            "delta_vida": after["vida"] - before["vida"],  # debería ser 0 en buff
+            "delta_vida": after["vida"] - before["vida"],
         }
