@@ -128,6 +128,7 @@ class Burro:
         """
         Consume energía por bloques de 'x_tiempo' durante 'tiempo_visita'.
         Devuelve energía efectivamente consumida.
+        Si la energía llega a 0, marca al burro como muerto.
         """
         if self.esta_muerto:
             return 0.0
@@ -138,8 +139,15 @@ class Burro:
         consumo = costo_energia_por_x * bloques
         consumo_real = min(consumo, max(0.0, self.energia))
         self.energia -= consumo_real
+        # asegurar límites
+        if self.energia <= 0.0:
+            self.energia = 0.0
+            # cuando la energía llega a cero, considerar muerte inmediata
+            self.salud = Health.Muerto
+
         self.energia = max(0.0, self.energia)
         return consumo_real
+
 
     # -----------------------------------------------------------------
     def aplicar_evento_salud(self, delta_vida: float = 0.0, nueva_salud: Optional[Health] = None):

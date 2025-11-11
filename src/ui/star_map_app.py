@@ -7,7 +7,10 @@ from src.core.json_loader import JsonLoader
 from src.core.graph_utils import build_graph_from_loader, get_path_edges
 from src.algorythmes.bellman_ford.bellman_algor import BellmanFord, NegativeCycleError
 from src.algorythmes.floyd_warshall.floyd_algor import FloydWarshall, build_graph_from_loader as build_fw_graph
+from src.algorythmes.report_generator import ReportGenerator
 from src.ui.report_viewer import open_report_window
+from src.core.burro import Burro
+
 
 
 
@@ -33,6 +36,20 @@ class StarMapApp:
         self.constellations = self.loader.get_constellations()
         self.shared_stars = self.loader.find_shared_stars()
         self.blocked_paths = set()
+
+        # --- Burro ---
+        self.burro = Burro.from_json(self.loader.data)
+
+        # Generador de reportes
+        self.report_gen = ReportGenerator("reports")
+        self.report_gen.data["burro_estado_inicial"] = {
+            "energia": self.burro.energia,
+            "salud": self.burro.salud.value,
+            "pasto": self.burro.pasto_kg,
+            "edad_inicial": self.burro.edad_inicial,
+            "edad_muerte": self.burro.edad_muerte
+        }
+
 
         # Colores y estructuras
         self.colors = ["cyan", "yellow", "orange", "violet", "lime", "white", "magenta", "gold", "deepskyblue"]
@@ -64,7 +81,21 @@ class StarMapApp:
         self.canvas.bind("<Button-1>", self.on_canvas_click)
 
         # --- Animador ---
-        self.animator = StarMapAnimator(self.canvas, self.loader, self.root, self.scale)
+        self.animator = StarMapAnimator(
+            self.canvas,
+            self.loader,
+            self.root,
+            self.scale,
+            burro=self.burro,
+            report_gen=self.report_gen
+        )
+
+
+        # --- Report Generator ---
+        self.report_gen = ReportGenerator("reports")
+
+        
+
 
 
         # --- Panel lateral ---
@@ -116,11 +147,12 @@ class StarMapApp:
         # en tu UI (p.ej. en show_info_panel)
         tk.Button(
             panel,
-            text="Ver último reporte",
+            text="Ver Reporte",
             bg="green",
             fg="white",
             command=lambda: open_report_window(self.root, "reports")
-        ).pack(anchor="w", pady=(5, 0), fill="x")
+        ).pack(anchor="w", pady=(10, 0), fill="x")
+
 
     def scale(self, x, y):
         """Escala coordenadas 0–200 → 0–600 px."""
@@ -362,6 +394,12 @@ class StarMapApp:
 
     def run_selected_route(self, start, end, route_type):
         """Ejecuta el recorrido seleccionado según tipo."""
+        # Limpiar cualquier animación anterior
+        if self.animator.burro_icon:
+            self.canvas.delete(self.animator.burro_icon)
+            self.animator.burro_icon = None
+        self.draw_constellations(self.selected_constellation)
+
         # Extraer solo el ID de las estrellas (antes del guion)
         start_id = start.split(" - ")[0].strip()
         end_id = end.split(" - ")[0].strip()
@@ -372,6 +410,7 @@ class StarMapApp:
             self._run_floyd_warshall(start_id, end_id)
         else:
             messagebox.showinfo("Info", f"Algoritmo {route_type} no implementado todavía.")
+
 
 
     def _run_bellman(self, source_id, target_id):
@@ -402,8 +441,20 @@ class StarMapApp:
                 f"Camino: {path}\nDistancia total: {total_dist:.2f}"
             )
 
+            # reset control flags antes de iniciar
+            if hasattr(self.animator, "stop_animation"):
+                self.animator.stop_animation = False
+
+
             self.animator.animate_path(path, color="red")
-            self.animator.animate_burro(path)
+
+            # Al finalizar, guardar el reporte
+            path_report = self.report_gen.finalize(
+                life_left_ly=self.burro.vida_restante,
+                end_reason="finished" if not self.burro.esta_muerto else "dead"
+            )
+            messagebox.showinfo("Reporte generado", f"Reporte guardado en:\n{path_report}")
+
 
         except NegativeCycleError:
             messagebox.showerror("Error", "Se detectó un ciclo negativo en el grafo.")
@@ -439,9 +490,20 @@ class StarMapApp:
                 f"Camino más corto entre {source} → {target}:\n{path}\n\nDistancia total: {dist:.2f}"
             )
 
-            # No llames highlight_path aquí (lo pinta estático)
-            # No llames animate_burro (duplicaría movimiento)
+            # reset control flags antes de iniciar
+            if hasattr(self.animator, "stop_animation"):
+                self.animator.stop_animation = False
+
+
             self.animator.animate_path(path, color="red")
+
+            # Al finalizar, guardar el reporte
+            path_report = self.report_gen.finalize(
+                life_left_ly=self.burro.vida_restante,
+                end_reason="finished" if not self.burro.esta_muerto else "dead"
+            )
+            messagebox.showinfo("Reporte generado", f"Reporte guardado en:\n{path_report}")
+
         except Exception as e:
             messagebox.showerror("Error en Floyd–Warshall", str(e))
 
