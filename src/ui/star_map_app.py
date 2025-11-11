@@ -30,6 +30,18 @@ class StarMapApp:
         self.line_items = {}
         self.line_colors = {}
 
+        # Colores y estructuras
+        self.colors = ["cyan", "yellow", "orange", "violet", "lime", "white", "magenta", "gold", "deepskyblue"]
+        random.shuffle(self.colors)
+        self.line_items = {}
+        self.line_colors = {}
+        self.blocked_paths = set()
+
+        # 🔹 Asignar un color fijo a cada constelación
+        self.constellation_colors = {}
+        for i, c in enumerate(self.constellations):
+            self.constellation_colors[c["name"]] = self.colors[i % len(self.colors)]
+
         # --- UI superior ---
         tk.Label(self.root, text="Selecciona constelación:", bg="black", fg="white").place(x=150, y=20)
 
@@ -46,6 +58,7 @@ class StarMapApp:
         self.canvas = tk.Canvas(self.root, width=700, height=720, bg="black")
         self.canvas.place(x=6, y=50)
         self.canvas.bind("<Button-1>", self.on_canvas_click)
+
 
         # --- Panel lateral ---
         self.show_info_panel()
@@ -92,10 +105,6 @@ class StarMapApp:
             fg="white",
             command=self.open_path_window
         ).pack(anchor="w", pady=(5, 0), fill="x")
-
-    # -------------------------------------------------------------------------
-    # 🔹 Dibujo de constelaciones
-    # -------------------------------------------------------------------------
     def scale(self, x, y):
         """Escala coordenadas 0–200 → 0–600 px."""
         return x * 3, y * 3
@@ -106,53 +115,118 @@ class StarMapApp:
         self.line_items.clear()
         self.line_colors.clear()
 
+        # ✅ Dibuja el plano cartesiano antes de las constelaciones
+        self.draw_grid()
+
+        # Filtrar constelaciones a dibujar
         consts_to_draw = (
             self.constellations if selected in (None, "Todas")
             else [c for c in self.constellations if c["name"] == selected]
         )
 
+        # Mapa global de colores por estrella (usando el color fijo)
         color_by_star = {}
-        for i, c in enumerate(self.constellations):
-            col = self.colors[i % len(self.colors)]
+        for c in self.constellations:
+            color = self.constellation_colors.get(c["name"], "white")
             for s in c["starts"]:
-                color_by_star[s["id"]] = col
+                color_by_star[s["id"]] = color
 
-        for i, constellation in enumerate(consts_to_draw):
-            color = self.colors[i % len(self.colors)]
+        # --- Fase de dibujo de aristas ---
+        for constellation in consts_to_draw:
+            const_color = self.constellation_colors.get(constellation["name"], "white")
             for star in constellation["starts"]:
                 x1, y1 = self.scale(star["coordenates"]["x"], star["coordenates"]["y"])
                 for link in star["linkedTo"]:
                     target = self.loader.find_star_by_id(link["starId"])
                     if target:
                         x2, y2 = self.scale(target["coordenates"]["x"], target["coordenates"]["y"])
-                        line = self.canvas.create_line(x1, y1, x2, y2, fill=color, width=2)
                         pair = tuple(sorted((star["id"], link["starId"])))
-                        self.line_items[line] = pair
-                        self.line_colors[line] = color
 
+                        # 🔹 Si el camino está bloqueado, aplicar estilo visual distinto
+                        if pair in self.blocked_paths:
+                            line = self.canvas.create_line(
+                                x1, y1, x2, y2,
+                                fill="gray", dash=(5, 3), width=3
+                            )
+                        else:
+                            line = self.canvas.create_line(
+                                x1, y1, x2, y2,
+                                fill=const_color, width=2
+                            )
+
+                        self.line_items[line] = pair
+                        self.line_colors[line] = const_color
+
+        # --- Dibujar estrellas ---
         all_stars = {}
         for constellation in consts_to_draw:
             for star in constellation["starts"]:
-                all_stars[star["id"]] = {"data": star, "color": color_by_star.get(star["id"], "white")}
+                all_stars[star["id"]] = {
+                    "data": star,
+                    "color": color_by_star.get(star["id"], "white")
+                }
 
+        # Asegurar que todas las estrellas referenciadas también estén en all_stars
         for constellation in consts_to_draw:
             for star in constellation["starts"]:
                 for link in star["linkedTo"]:
                     target = self.loader.find_star_by_id(link["starId"])
                     if target and target["id"] not in all_stars:
-                        all_stars[target["id"]] = {"data": target, "color": color_by_star.get(target["id"], "white")}
+                        tid = target["id"]
+                        all_stars[tid] = {
+                            "data": target,
+                            "color": color_by_star.get(tid, "white")
+                        }
 
+        # --- Dibujar nodos (estrellas) ---
         for sid, info in all_stars.items():
             star = info["data"]
             x, y = self.scale(star["coordenates"]["x"], star["coordenates"]["y"])
             radius = star["radius"] * 5
+
             fill_color = "red" if sid in self.shared_stars else info["color"]
 
-            self.canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=fill_color, outline="")
+            self.canvas.create_oval(
+                x - radius, y - radius, x + radius, y + radius,
+                fill=fill_color, outline=""
+            )
             self.canvas.create_text(x + 10, y, text=star["label"], fill="white", anchor="w")
 
-    # Interacciones
 
+    def draw_grid(self, step=20, size=235):
+        """Dibuja un plano cartesiano 200x200 con ejes y cuadrícula."""
+        scale_factor = 3
+        canvas_size = size * scale_factor
+        half = canvas_size // 2
+
+        # Limpiar cuadrícula anterior
+        # (solo si quieres borrar líneas viejas del grid)
+        # self.canvas.delete("grid")
+
+        # Fondo gris suave (opcional)
+        self.canvas.create_rectangle(0, 0, canvas_size, canvas_size, fill="black", outline="", tags="grid")
+
+        # Líneas de cuadrícula
+        for i in range(0, size + 1, step):
+            x = i * scale_factor
+            y = i * scale_factor
+            # Líneas horizontales y verticales (simétricas en ambos lados del eje)
+            self.canvas.create_line(0, y, canvas_size, y, fill="#333333", dash=(2, 2), tags="grid")
+            self.canvas.create_line(x, 0, x, canvas_size, fill="#333333", dash=(2, 2), tags="grid")
+
+        # Ejes centrales
+        self.canvas.create_line(0, half, canvas_size, half, fill="red", width=2, tags="grid")  # Eje X
+        self.canvas.create_line(half, 0, half, canvas_size, fill="red", width=2, tags="grid")  # Eje Y
+
+        # Etiquetas de ejes
+        self.canvas.create_text(canvas_size - 15, half - 10, text="X", fill="red", font=("Arial", 10, "bold"), tags="grid")
+        self.canvas.create_text(half + 10, 10, text="Y", fill="red", font=("Arial", 10, "bold"), tags="grid")
+
+        # Etiqueta del origen
+        self.canvas.create_text(half + 15, half + 15, text="(0,0)", fill="white", font=("Arial", 8), tags="grid")
+
+
+    # Interacciones
     def on_canvas_click(self, event):
         """Alterna el bloqueo de una arista al hacer clic."""
         item = self.canvas.find_closest(event.x, event.y)[0]
@@ -162,13 +236,13 @@ class StarMapApp:
         pair = self.line_items[item]
         if pair in self.blocked_paths:
             self.blocked_paths.remove(pair)
-            color = self.line_colors.get(item, "white")
-            self.canvas.itemconfig(item, fill=color, dash=(), width=2)
         else:
             self.blocked_paths.add(pair)
-            self.canvas.itemconfig(item, fill="gray", dash=(5, 3), width=3)
 
         self.blocked_label.config(text=f"Caminos bloqueados: {len(self.blocked_paths)}")
+
+        # Redibujar constelaciones (respetando bloqueos)
+        self.draw_constellations(self.selected_constellation)
 
     def on_select_constellation(self, _event):
         selected = self.selector.get()
