@@ -7,6 +7,7 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import pygame
 from src.core.burrito_runtime import BurroRuntimeEngine, StarEffect
+from src.core.hypergiants import is_hypergiant, collect_hypergiants, list_jump_destinations, apply_hypergiant_effects
 
 
 class StarMapAnimator:
@@ -20,6 +21,7 @@ class StarMapAnimator:
         self.burro_image = None  # si tienes una imagen cargada
         self.burro = burro
         self.report_gen = report_gen
+        self.hypergiants = collect_hypergiants(self.loader)
 
         try:
             base_dir = os.path.dirname(__file__)           # carpeta animations/
@@ -61,7 +63,7 @@ class StarMapAnimator:
                 else:
                     self.burro_icon = self.canvas.create_oval(x0-6, y0-6, x0+6, y0+6, fill="white", outline="")
 
-        burro = self.burro  # asumimos que lo pasaste en el constructor
+        burro = self.burro
         report = self.report_gen
 
         def move_burro(x1, y1, x2, y2, steps=move_steps, j=0, callback=None):
@@ -94,6 +96,9 @@ class StarMapAnimator:
             x1, y1 = self.scale(cur_star["coordenates"]["x"], cur_star["coordenates"]["y"])
             x2, y2 = self.scale(next_star["coordenates"]["x"], next_star["coordenates"]["y"])
 
+            cur_galaxy = cur_star.get("galaxy_id")
+            next_galaxy = next_star.get("galaxy_id")
+
             def after_move():
                 # dibujar línea
                 self.canvas.create_line(x1, y1, x2, y2, fill=color, width=3)
@@ -117,6 +122,22 @@ class StarMapAnimator:
                         energy_in_pct=energia_inicial,
                         energy_out_pct=burro.energia
                     )
+
+                # Chequear hipergigante y aplicar buff
+                from src.core.hypergiants import is_hypergiant, apply_hypergiant_effects, list_jump_destinations
+                if is_hypergiant(next_star):
+                    apply_hypergiant_effects(burro)
+                    print(f"💥 Hipergigante! Energía={burro.energia:.1f}%, Pasto={burro.pasto_kg:.1f}kg")
+
+                    # Opcional: listar destinos de salto
+                    destinos = list_jump_destinations(
+                        loader=self.loader,
+                        current_star_id=next_star["id"],
+                        current_galaxy_id = next_star.get("galaxy_id")
+                    )
+                    print("Destinos posibles para hipersalto:", destinos)
+
+
 
                 # ---> Comprobar muerte
                 if burro and burro.esta_muerto:
@@ -183,7 +204,6 @@ class StarMapAnimator:
 
                         blink()
 
-                        # 🧩 Sonido (en hilo aparte para no congelar la GUI)
                         def play_death_sound():
                             try:
                                 base_dir = os.path.dirname(__file__)
@@ -199,6 +219,7 @@ class StarMapAnimator:
 
                         threading.Thread(target=play_death_sound, daemon=True).start()
 
+                        step(i+1)
 
                     return
 
