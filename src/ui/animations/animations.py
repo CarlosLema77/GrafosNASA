@@ -1,10 +1,13 @@
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+
 import threading
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import pygame
-import threading
-import os
+from src.core.burrito_runtime import BurroRuntimeEngine, StarEffect
+
 
 class StarMapAnimator:
 
@@ -31,6 +34,15 @@ class StarMapAnimator:
             self.burro_image = None
 
         self.burro_icon = None
+
+        self.engine = BurroRuntimeEngine(self.burro, on_update=self.actualizar_ui)
+        self.current_star_id = 1  # se actualiza dinámicamente según el recorrido
+
+    def actualizar_ui(self, estado):
+        """Callback que actualiza la interfaz cuando el burro cambia."""
+        print("🟢 Estado del burro actualizado:", estado)
+
+
 
     def animate_path(self, path, color="red", move_steps=20, step_delay=40):
         if not path or len(path) < 2:
@@ -247,40 +259,40 @@ class StarMapAnimator:
         self.root.after(interval, lambda: self.animate_hypergiants(interval))
 
     def show_burro_window(self, star, on_next):
-        """Ventana con información de la estrella y estado actual del burro (con campos editables)."""
+        """Ventana para editar los efectos de la estrella visitada (acorde con StarEffect)."""
         win = tk.Toplevel(self.root)
-        win.title("Visita estelar 🪐")
-        win.geometry("360x380")
+        win.title("Efectos estelares 🌌")
+        win.geometry("360x420")
         win.configure(bg="black")
 
-        burro = self.burro  # acceso directo al modelo
+        # Estado actual del burro (desde el motor)
+        state = self.engine.state()
 
         # --- Título ---
         tk.Label(
-            win, text=f"🌟 Estrella actual: {star['label']}",
+            win, text=f"🌟 Estrella visitada: {star['label']}",
             fg="cyan", bg="black", font=("Arial", 14, "bold")
         ).pack(pady=(10, 5))
 
-        # --- Datos solo lectura ---
+        # --- Datos no editables ---
         frame_info = tk.Frame(win, bg="black")
         frame_info.pack(pady=10)
 
         def add_info(label, value):
-            tk.Label(frame_info, text=f"{label}: ", fg="white", bg="black", width=14, anchor="w").grid(sticky="w", row=add_info.row, column=0)
+            tk.Label(frame_info, text=f"{label}: ", fg="white", bg="black", width=16, anchor="w").grid(sticky="w", row=add_info.row, column=0)
             tk.Label(frame_info, text=value, fg="lightgreen", bg="black", anchor="w").grid(sticky="w", row=add_info.row, column=1)
             add_info.row += 1
         add_info.row = 0
 
-        add_info("Edad actual (ly)", f"{burro.vida_restante:.2f}")
-        add_info("Energía actual (%)", f"{burro.energia:.2f}")
-        add_info("Pasto actual (kg)", f"{burro.pasto_kg:.2f}")
-        add_info("Salud", f"{burro.salud.value}")
+        add_info("Vida restante (ly)", f"{state['vida_restante']:.2f}")
+        add_info("Energía actual (%)", f"{state['energia']:.2f}")
+        add_info("Pasto actual (kg)", f"{state['pasto_kg']:.2f}")
 
-        # --- Campos editables ---
+        # --- Campos editables (efectos a aplicar) ---
         frame_edit = tk.LabelFrame(win, text="Cambios (ganados o perdidos)", fg="yellow", bg="black", padx=10, pady=10)
         frame_edit.pack(pady=(10, 10))
 
-        tk.Label(frame_edit, text="Δ Edad (ly):", fg="white", bg="black").grid(row=0, column=0, sticky="e", padx=5, pady=3)
+        tk.Label(frame_edit, text="Δ Edad (años-luz):", fg="white", bg="black").grid(row=0, column=0, sticky="e", padx=5, pady=3)
         edad_entry = tk.Entry(frame_edit, width=10)
         edad_entry.grid(row=0, column=1, pady=3)
 
@@ -292,17 +304,46 @@ class StarMapAnimator:
         pasto_entry = tk.Entry(frame_edit, width=10)
         pasto_entry.grid(row=2, column=1, pady=3)
 
+        # Campo opcional para nota o descripción del efecto
+        tk.Label(frame_edit, text="Nota:", fg="white", bg="black").grid(row=3, column=0, sticky="e", padx=5, pady=3)
+        nota_entry = tk.Entry(frame_edit, width=20)
+        nota_entry.grid(row=3, column=1, pady=3)
+
         # --- Acción Guardar y continuar ---
         def guardar_y_continuar():
             try:
-                delta_edad = float(edad_entry.get() or 0)
+                delta_vida = float(edad_entry.get() or 0)
                 delta_energia = float(energia_entry.get() or 0)
                 delta_pasto = float(pasto_entry.get() or 0)
+                nota = nota_entry.get().strip()
 
-                # Aplicar cambios
-                burro.vida_restante += delta_edad
-                burro.energia = max(0, min(100, burro.energia + delta_energia))  # límite entre 0 y 100
-                burro.pasto_kg = max(0, burro.pasto_kg + delta_pasto)
+                # Crear un StarEffect con los datos ingresados
+                efecto = StarEffect(
+                    vida_ly=delta_vida,
+                    energia=delta_energia,
+                    alimento=delta_pasto,
+                    nota=nota
+                )
+
+                # Buscar la distancia entre la estrella actual y la siguiente
+                distancia_ly = 0
+                cur_star = self.loader.find_star_by_id(self.current_star_id)
+                next_star = star  # 'star' es la estrella actual de la ventana
+
+                if cur_star and next_star:
+                    for link in cur_star.get("linkedTo", []):
+                        if link["starId"] == next_star["id"]:
+                            distancia_ly = link["distance"]
+                            break
+
+                # Aplicar el paso en el motor
+                self.engine.apply_step(
+                    from_star_id=self.current_star_id,
+                    to_star_id=star["id"],
+                    to_star_label=star["label"],
+                    distancia_ly=distancia_ly,
+                    effect=efecto
+                )
 
             except ValueError:
                 messagebox.showwarning("Error", "Por favor ingresa solo números válidos.")

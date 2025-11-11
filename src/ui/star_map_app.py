@@ -11,10 +11,6 @@ from src.algorythmes.report_generator import ReportGenerator
 from src.ui.report_viewer import open_report_window
 from src.core.burro import Burro
 
-
-
-
-
 from src.ui.animations.animations import StarMapAnimator
 
 
@@ -105,6 +101,7 @@ class StarMapApp:
         self.draw_constellations()
 
         self.root.mainloop()
+
 
     # -------------------------------------------------------------------------
     # 🔹 Panel lateral
