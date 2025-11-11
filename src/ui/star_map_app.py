@@ -7,6 +7,7 @@ from src.core.json_loader import JsonLoader
 from src.core.graph_utils import build_graph_from_loader, get_path_edges
 from src.algorythmes.bellman_ford.bellman_algor import BellmanFord, NegativeCycleError
 from src.algorythmes.floyd_warshall.floyd_algor import FloydWarshall, build_graph_from_loader as build_fw_graph
+from src.ui.report_viewer import open_report_window
 
 
 
@@ -110,6 +111,15 @@ class StarMapApp:
             bg="green",
             fg="white",
             command=self.open_path_window
+        ).pack(anchor="w", pady=(5, 0), fill="x")
+
+        # en tu UI (p.ej. en show_info_panel)
+        tk.Button(
+            panel,
+            text="Ver último reporte",
+            bg="green",
+            fg="white",
+            command=lambda: open_report_window(self.root, "reports")
         ).pack(anchor="w", pady=(5, 0), fill="x")
 
     def scale(self, x, y):
