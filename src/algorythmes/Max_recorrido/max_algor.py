@@ -60,8 +60,8 @@ class MaxRoutePlanner:
         if current not in self._star_index:
             raise ValueError(f"start_star_id {current} no existe.")
 
-        visited_stars: Set[int] = set()
-        visited_galaxies: Set[Optional[int]] = set()
+        visited_stars: Set[int] = Set()
+        visited_galaxies: Set[Optional[int]] = Set()
         current_galaxy = self._galaxy_of(current)
         visited_galaxies.add(current_galaxy)
         visited_stars.add(current)

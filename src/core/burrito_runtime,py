@@ -1,0 +1,268 @@
+from __future__ import annotations
+from dataclasses import dataclass, asdict, replace, is_dataclass
+from typing import Callable, Dict, List, Optional, Any
+import copy
+
+# ------------------------------------------------------------
+# TIPOS DE DATOS
+# ------------------------------------------------------------
+
+@dataclass
+class StarEffect:
+    """
+    Efectos puntuales que el científico define para la estrella visitada.
+    Todos los campos son 'delta' aplicados al llegar a la estrella (post viaje).
+    - vida_ly: años-luz ganados/perdidos por investigaciones/enfermedades (+/-)
+    - energia: energía ganada/perdida (+/-)
+    - alimento: pasto/comida ganada/perdida (+/-)
+    - nota: texto libre para el recap
+    """
+    vida_ly: float = 0.0
+    energia: float = 0.0
+    alimento: float = 0.0
+    nota: str = ""
+
+
+@dataclass
+class StepRecap:
+    """
+    Resumen por paso para UI/tabla.
+    """
+    from_star_id: int
+    to_star_id: int
+    to_star_label: str
+    distancia_ly: float
+    vida_antes: float
+    vida_delta_viaje: float
+    vida_delta_estrella: float
+    vida_despues: float
+    energia_antes: float
+    energia_delta: float
+    energia_despues: float
+    alimento_antes: float
+    alimento_delta: float
+    alimento_despues: float
+    nota: str
+
+
+# ------------------------------------------------------------
+# ADAPTADOR DEL BURRO (no dependemos de implementación concreta)
+# ------------------------------------------------------------
+
+class BurroAdapter:
+    """
+    Envuelve una instancia de 'Burro' (cualquiera) y expone getters/setters
+    normalizados. No requiere que el Burro sea un dataclass específico, pero
+    si lo es, usamos 'replace' para clonar.
+    Campos esperados en tu Burro real:
+      - energia (float)
+      - pasto_kg (float)
+      - vida_restantes (float)   # años-luz
+      - edad_actual (float)      # opcional, no se toca aquí
+    Método opcional:
+      - viajar(dist_ly: float): puede existir; si no, resta vida_restantes.
+    """
+
+    def __init__(self, burro_real: Any):
+        self._orig = burro_real
+        # Clon profundo seguro (si es dataclass, intenta replace; si no, deepcopy)
+        if is_dataclass(burro_real):
+            try:
+                self._copy = replace(burro_real)
+            except Exception:
+                self._copy = copy.deepcopy(burro_real)
+        else:
+            self._copy = copy.deepcopy(burro_real)
+
+        # Validación mínima
+        for attr in ("energia", "pasto_kg", "vida_restantes"):
+            if not hasattr(self._copy, attr):
+                raise AttributeError(f"Burro no tiene atributo requerido: '{attr}'")
+
+    # --- acceso a la copia ---
+
+    @property
+    def model(self) -> Any:
+        return self._copy
+
+    # --- getters ---
+
+    def get_vida(self) -> float:
+        return float(getattr(self._copy, "vida_restantes"))
+
+    def get_energia(self) -> float:
+        return float(getattr(self._copy, "energia"))
+
+    def get_alimento(self) -> float:
+        return float(getattr(self._copy, "pasto_kg"))
+
+    # --- setters (clamp a >= 0) ---
+
+    def set_vida(self, value: float) -> None:
+        setattr(self._copy, "vida_restantes", max(0.0, float(value)))
+
+    def set_energia(self, value: float) -> None:
+        setattr(self._copy, "energia", max(0.0, float(value)))
+
+    def set_alimento(self, value: float) -> None:
+        setattr(self._copy, "pasto_kg", max(0.0, float(value)))
+
+    # --- viaje ---
+
+    def viajar(self, distancia_ly: float) -> float:
+        """
+        Consume vida por viaje. Si el burro implementa .viajar(), lo usamos.
+        Retorna el delta de vida (negativo).
+        """
+        distancia_ly = float(distancia_ly)
+        if hasattr(self._copy, "viajar") and callable(getattr(self._copy, "viajar")):
+            vida_antes = self.get_vida()
+            self._copy.viajar(distancia_ly)
+            vida_despues = self.get_vida()
+            return vida_despues - vida_antes  # normalmente negativo
+        else:
+            # Comportamiento por defecto: restar vida_restantes
+            vida_antes = self.get_vida()
+            self.set_vida(vida_antes - distancia_ly)
+            return -distancia_ly
+
+
+# ------------------------------------------------------------
+# MOTOR DE EFECTOS EN TIEMPO REAL (PASO A PASO)
+# ------------------------------------------------------------
+
+class BurroRuntimeEngine:
+    """
+    Aplica, en tiempo real y paso a paso, los efectos de cada estrella al burro COPIA.
+    No modifica al burro original. Pensado para conectar a la UI por callbacks.
+
+    Uso típico:
+      engine = BurroRuntimeEngine(real_burro, on_update=mi_callback)
+      recap = engine.apply_step(
+          from_star_id=1,
+          to_star_id=3,
+          to_star_label="Goku",
+          distancia_ly=85,
+          effect=StarEffect(vida_ly=+2, energia=-1, alimento=+0.5, nota="Vacuna exitosa")
+      )
+      # 'recap' te sirve para tabla; el callback recibe el estado vivo para la UI.
+    """
+
+    def __init__(
+        self,
+        real_burro: Any,
+        *,
+        on_update: Optional[Callable[[Dict[str, float]], None]] = None
+    ) -> None:
+        self._adapter = BurroAdapter(real_burro)
+        self._on_update = on_update
+        self._history: List[StepRecap] = []
+
+    # --- estado actual de la copia (para la UI) ---
+
+    def state(self) -> Dict[str, float]:
+        """
+        Retorna un dict listo para UI:
+          { "vida_restantes": ..., "energia": ..., "pasto_kg": ... }
+        """
+        return {
+            "vida_restantes": self._adapter.get_vida(),
+            "energia": self._adapter.get_energia(),
+            "pasto_kg": self._adapter.get_alimento(),
+        }
+
+    # --- aplicación de un paso (viaje + efectos de estrella de llegada) ---
+
+    def apply_step(
+        self,
+        *,
+        from_star_id: int,
+        to_star_id: int,
+        to_star_label: str,
+        distancia_ly: float,
+        effect: Optional[StarEffect] = None
+    ) -> StepRecap:
+        """
+        1) Aplica costo de viaje (resta vida por distancia).
+        2) Aplica efectos de la estrella (vida/energía/alimento).
+        3) Emite resumen (StepRecap) y dispara callback on_update() si existe.
+
+        No hay side-effects fuera de la copia; el burro original queda intacto.
+        """
+
+        effect = effect or StarEffect()
+
+        # --- snapshot antes ---
+        vida_antes = self._adapter.get_vida()
+        energia_antes = self._adapter.get_energia()
+        alimento_antes = self._adapter.get_alimento()
+
+        # --- viaje (consume vida por distancia) ---
+        vida_delta_viaje = self._adapter.viajar(distancia_ly)  # negativo normalmente
+
+        # Si la vida llegó a 0, aún aplicamos efectos (por si "reviven" o suman vida)
+        # --- aplicar efectos de la estrella (post-llegada) ---
+        # VIDA
+        self._adapter.set_vida(self._adapter.get_vida() + float(effect.vida_ly))
+        # ENERGÍA
+        self._adapter.set_energia(self._adapter.get_energia() + float(effect.energia))
+        # ALIMENTO
+        self._adapter.set_alimento(self._adapter.get_alimento() + float(effect.alimento))
+
+        # --- snapshot después ---
+        vida_despues = self._adapter.get_vida()
+        energia_despues = self._adapter.get_energia()
+        alimento_despues = self._adapter.get_alimento()
+
+        recap = StepRecap(
+            from_star_id=int(from_star_id),
+            to_star_id=int(to_star_id),
+            to_star_label=str(to_star_label),
+            distancia_ly=float(distancia_ly),
+            vida_antes=float(vida_antes),
+            vida_delta_viaje=float(vida_delta_viaje),
+            vida_delta_estrella=float(effect.vida_ly),
+            vida_despues=float(vida_despues),
+            energia_antes=float(energia_antes),
+            energia_delta=float(effect.energia),
+            energia_despues=float(energia_despues),
+            alimento_antes=float(alimento_antes),
+            alimento_delta=float(effect.alimento),
+            alimento_despues=float(alimento_despues),
+            nota=str(effect.nota or "").strip(),
+        )
+
+        self._history.append(recap)
+
+        # Callback para UI (barras, labels, etc.)
+        if self._on_update is not None:
+            self._on_update(self.state())
+
+        return recap
+
+    # --- historial para la tabla de recap ---
+
+    def recap_history(self) -> List[StepRecap]:
+        return list(self._history)
+
+    def recap_as_rows(self) -> List[Dict[str, Any]]:
+        """
+        Formato amigable para tabla:
+        - Galaxia no se maneja aquí (la UI/planificador puede agregarla).
+        - Solo “qué ganó/perdió” y costo de distancia.
+        """
+        rows = []
+        for r in self._history:
+            rows.append({
+                "De → A": f"{r.from_star_id} → {r.to_star_id} ({r.to_star_label})",
+                "Distancia (ly)": r.distancia_ly,
+                "Vida (−viaje)": r.vida_delta_viaje,         # normalmente < 0
+                "Vida (±estrella)": r.vida_delta_estrella,   # + / − por investigación/enfermedad
+                "Vida (final)": r.vida_despues,
+                "Energía (±estrella)": r.energia_delta,
+                "Energía (final)": r.energia_despues,
+                "Alimento (±estrella)": r.alimento_delta,
+                "Alimento (final)": r.alimento_despues,
+                "Nota": r.nota,
+            })
+        return rows
